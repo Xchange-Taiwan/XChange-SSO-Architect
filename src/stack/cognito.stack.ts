@@ -9,6 +9,7 @@ import {
   SERVICE_PREFIX,
   XChangeLambdaFunctionDefaultProps,
 } from '../helper/helper';
+import { APP_REMOVALPOLICY } from '../main';
 
 interface CognitoStackDependencyProps extends core.StackProps {
   generalLayerStringParameter: ssm.IStringParameter;
@@ -41,12 +42,7 @@ export class CognitoStack extends core.Stack {
 
     // Authorizer
     this.userPool = new cognito.UserPool(this, id + 'SSOUserPool', {
-      /**
-       *  The default removal policy is RETAIN, which means that cdk destroy will not attempt to delete
-       * the new table, and it will remain in your account until manually deleted. By setting the policy to
-       * DESTROY, cdk destroy will delete the table (even if it has data in it)
-       */
-      removalPolicy: core.RemovalPolicy.DESTROY, // NOT recommended for production code
+      removalPolicy: APP_REMOVALPOLICY,
 
       userPoolName: SERVICE_PREFIX + 'UserPool',
       selfSignUpEnabled: true,
