@@ -5,8 +5,16 @@ import { PipelineStack } from './stack/pipeline-stack.ts';
 import { SSOBackend } from './stage/backend.stage';
 import { SSOFrontend } from './stage/frontend.stage';
 
-const app = new core.App();
+/**
+ *  The default removal policy is RETAIN, which means that cdk destroy will not attempt to delete
+ * the new resource, and it will remain in your account until manually deleted. By setting the policy to
+ * DESTROY, cdk destroy will delete the resource (even if it has record in it)
+ */
+export const APP_REMOVALPOLICY = core.RemovalPolicy.DESTROY; // NOT recommended for production code
+
 const STACK_PREFIX = 'XChangeSSOArchitect';
+
+const app = new core.App();
 
 async function main() {
   const buildConfig = await getBuildConfig();
@@ -45,6 +53,7 @@ async function main() {
       linkedInSecretArn: buildConfig.linkedInSecretArn,
     }),
     {
+      // Because of [lambda] deployment failure on updates to cross-stack layers https://github.com/aws/aws-cdk/issues/1972
       pre: [
         new pipelines.ShellStep('SSOBackendPreLayerStackShellStep', {
           commands: [

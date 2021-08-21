@@ -1,4 +1,4 @@
-# Welcome to XChange SSO Archutect project!
+# Welcome to XChange SSO Architect project!
 
 This is a XChange SSO project for TypeScript development with CDK.
 
