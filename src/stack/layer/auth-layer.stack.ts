@@ -3,6 +3,7 @@ import * as lambdaPython from '@aws-cdk/aws-lambda-python';
 import * as ssm from '@aws-cdk/aws-ssm';
 import * as core from '@aws-cdk/core';
 import { SERVICE_PREFIX } from '../../helper/helper';
+import { APP_REMOVALPOLICY } from '../../main';
 
 export class AuthLayerStack extends core.Stack {
   public readonly generalLayer: lambdaPython.PythonLayerVersion;
@@ -16,12 +17,7 @@ export class AuthLayerStack extends core.Stack {
       {
         layerVersionName: SERVICE_PREFIX + 'AuthLayer',
         entry: path.join('./', 'code', 'lambda', 'layer', 'auth'),
-        /**
-         *  The default removal policy is RETAIN, which means that cdk destroy will not attempt to delete
-         * the new table, and it will remain in your account until manually deleted. By setting the policy to
-         * DESTROY, cdk destroy will delete the table (even if it has data in it)
-         */
-        removalPolicy: core.RemovalPolicy.DESTROY, // NOT recommended for production code
+        removalPolicy: APP_REMOVALPOLICY,
       },
     );
 

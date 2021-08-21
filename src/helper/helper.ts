@@ -66,65 +66,87 @@ export const getBuildConfig = async (): Promise<any> => {
   }
 
   // Get ssm value
-  const params = await ssm
-    .getParameters({
-      Names: [
-        '/account/share/domainAcm',
-        '/account/sso/development',
-        '/account/sso/prod/backend',
-        '/account/sso/frontend',
-        '/arn/share/domainAcm/wildcardXchangeDomain',
-        '/arn/share/secret/linkedIn',
-      ],
+  const domainAcmAccountIDRes = await ssm
+    .getParameter({
+      Name: '/account/share/domainAcm',
     })
     .promise();
+  const domainAcmAccountID = domainAcmAccountIDRes.Parameter?.Value;
+  if (!domainAcmAccountID) {
+    throw new Error("Parameter: /account/share/domainAcm isn't exist!");
+  }
 
-  let organizations: {
-    [key: string]: core.Environment;
-  } = {};
-  let wildcardXchangeDomainCertificateArn: string = '';
-  let linkedInSecretArn: string = '';
+  const ssoDevelopmentAccountIDRes = await ssm
+    .getParameter({
+      Name: '/account/sso/development',
+    })
+    .promise();
+  const ssoDevelopmentAccountID = ssoDevelopmentAccountIDRes.Parameter?.Value;
+  if (!ssoDevelopmentAccountID) {
+    throw new Error("Parameter: /account/sso/development isn't exist!");
+  }
 
-  params.Parameters?.forEach((param) => {
-    switch (param.Name) {
-      case '/account/share/domainAcm': {
-        organizations.domainAcm = {
-          account: param.Value,
-          region: 'ap-southeast-1',
-        };
-        break;
-      }
-      case '/account/sso/development': {
-        organizations.ssoDevelopment = {
-          account: param.Value,
-          region: 'ap-southeast-1',
-        };
-        break;
-      }
-      case '/account/sso/prod/backend': {
-        organizations.ssoBackendProd = {
-          account: param.Value,
-          region: 'ap-southeast-1',
-        };
-        break;
-      }
-      case '/account/sso/frontend': {
-        organizations.ssoFrontend = {
-          account: param.Value,
-          region: 'ap-southeast-1',
-        };
-        break;
-      }
-      case '/arn/share/domainAcm/wildcardXchangeDomain': {
-        wildcardXchangeDomainCertificateArn = param.Value as string;
-        break;
-      }
-      case '/arn/share/secret/linkedIn': {
-        linkedInSecretArn = param.Value as string;
-        break;
-      }
-    }
-  });
+  const ssoBackendProdAccountIDRes = await ssm
+    .getParameter({
+      Name: '/account/sso/prod/backend',
+    })
+    .promise();
+  const ssoBackendProdAccountID = ssoBackendProdAccountIDRes.Parameter?.Value;
+  if (!ssoBackendProdAccountID) {
+    throw new Error("Parameter: /account/sso/prod/backend isn't exist!");
+  }
+
+  const ssoFrontendAccountIDRes = await ssm
+    .getParameter({
+      Name: '/account/sso/frontend',
+    })
+    .promise();
+  const ssoFrontendAccountID = ssoFrontendAccountIDRes.Parameter?.Value;
+  if (!ssoFrontendAccountID) {
+    throw new Error("Parameter: /account/sso/frontend isn't exist!");
+  }
+
+  const wildcardXchangeDomainCertificateArnRes = await ssm
+    .getParameter({
+      Name: '/arn/share/domainAcm/wildcardXchangeDomain',
+    })
+    .promise();
+  const wildcardXchangeDomainCertificateArn =
+    wildcardXchangeDomainCertificateArnRes.Parameter?.Value;
+  if (!wildcardXchangeDomainCertificateArn) {
+    throw new Error(
+      "Parameter: /arn/share/domainAcm/wildcardXchangeDomain isn't exist!",
+    );
+  }
+
+  const linkedInSecretArnRes = await ssm
+    .getParameter({
+      Name: '/arn/share/secret/linkedIn',
+    })
+    .promise();
+  const linkedInSecretArn = linkedInSecretArnRes.Parameter?.Value;
+  if (!linkedInSecretArn) {
+    throw new Error("Parameter: /arn/share/secret/linkedIn isn't exist!");
+  }
+
+  const organizations = {
+    domainAcm: {
+      account: domainAcmAccountID,
+      region: 'ap-southeast-1',
+    },
+    ssoDevelopment: {
+      account: ssoDevelopmentAccountID,
+      region: 'ap-southeast-1',
+    },
+    ssoBackendProd: {
+      account: ssoBackendProdAccountID,
+      region: 'ap-southeast-1',
+    },
+    ssoFrontend: {
+      account: ssoFrontendAccountID,
+      region: 'ap-southeast-1',
+    },
+  };
 
   const buildConfig = {
     organizations,
