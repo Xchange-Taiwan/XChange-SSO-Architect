@@ -19,7 +19,7 @@
     },
     {
       "name": "aws-cdk",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "build"
     },
     {
@@ -92,97 +92,97 @@
     },
     {
       "name": "@aws-cdk/assert",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-amplify",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-apigatewayv2-authorizers",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-apigatewayv2-integrations",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-apigatewayv2",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-certificatemanager",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-codebuild",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-codepipeline-actions",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-codepipeline",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-cognito",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-dynamodb",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-iam",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-kms",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-lambda-python",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-lambda",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-secretsmanager",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/aws-ssm",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/core",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
       "name": "@aws-cdk/pipelines",
-      "version": "^1.119.0",
+      "version": "^1.120.0",
       "type": "runtime"
     },
     {
