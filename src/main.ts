@@ -1,6 +1,6 @@
 import * as core from '@aws-cdk/core';
 import * as pipelines from '@aws-cdk/pipelines';
-import { getBuildConfigSet } from './helper/helper';
+import { getBuildConfigSet, XChangeSSOEnvConfigSet } from './helper/helper';
 import { PipelineStack } from './stack/pipeline.stack.ts';
 import { BackendStage } from './stage/backend.stage';
 import { FrontendStage } from './stage/frontend.stage';
@@ -11,7 +11,7 @@ const STACK_PREFIX = 'XChangeSSO';
 const app = new core.App();
 
 async function main() {
-  const buildConfigSet = await getBuildConfigSet();
+  const buildConfigSet: XChangeSSOEnvConfigSet = await getBuildConfigSet();
 
   const pipelineStack = new PipelineStack(app, STACK_PREFIX + 'PipelineStack', {
     env: buildConfigSet.deploymentAccount,
@@ -20,7 +20,7 @@ async function main() {
   // Because of [lambda] deployment failure on updates to cross-stack layers https://github.com/aws/aws-cdk/issues/1972
   pipelineStack.pipeline.addStage(
     new BackendLayerStage(app, STACK_PREFIX + 'BackendLayerStage', {
-      env: buildConfigSet.deploymentAccount,
+      env: buildConfigSet.production.backendAccount,
       buildConfig: buildConfigSet.production,
     }),
     {
@@ -34,14 +34,14 @@ async function main() {
 
   deployWave.addStage(
     new BackendStage(app, STACK_PREFIX + 'BackendStage', {
-      env: buildConfigSet.deploymentAccount,
+      env: buildConfigSet.production.backendAccount,
       buildConfig: buildConfigSet.production,
     }),
   );
 
   deployWave.addStage(
     new FrontendStage(app, STACK_PREFIX + 'FrontendStage', {
-      env: buildConfigSet.deploymentAccount,
+      env: buildConfigSet.production.frontendAccount,
       buildConfig: buildConfigSet.production,
     }),
   );

@@ -24,5 +24,12 @@ export class DynamoDBStack extends core.Stack {
       tableName: SERVICE_PREFIX + 'Cognito_User',
       removalPolicy: buildConfig.removalPolicy,
     });
+    this.cognitoUserTable.addGlobalSecondaryIndex({
+      partitionKey: {
+        name: 'linkedin_id',
+        type: dynamodb.AttributeType.STRING,
+      },
+      indexName: 'linkedin_id-index',
+    });
   }
 }
