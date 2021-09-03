@@ -88,8 +88,8 @@ export class CognitoStack extends core.Stack {
           cognito.OAuthScope.EMAIL,
           cognito.OAuthScope.PHONE,
         ],
-        callbackUrls: ['https://connect.xchange.com.tw/auth/callback'],
-        logoutUrls: ['https://connect.xchange.com.tw/logout'],
+        callbackUrls: ['https://talent.xchange.com.tw/auth/callback'],
+        logoutUrls: ['https://talent.xchange.com.tw/logout'],
       },
     });
 

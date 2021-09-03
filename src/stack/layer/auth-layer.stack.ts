@@ -22,7 +22,6 @@ export class AuthLayerStack extends core.Stack {
       {
         layerVersionName: SERVICE_PREFIX + 'AuthLayer',
         entry: path.join('./', 'code', 'lambda', 'layer', 'auth'),
-        removalPolicy: buildConfig.removalPolicy,
       },
     );
 
