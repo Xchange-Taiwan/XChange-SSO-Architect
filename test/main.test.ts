@@ -1,6 +1,6 @@
 import '@aws-cdk/assert/jest';
 import { App } from '@aws-cdk/core';
-import { PipelineStack } from '../src/stack/pipeline-stack.ts';
+import { PipelineStack } from './../src/stack/pipeline.stack.ts';
 
 test('Snapshot', () => {
   const app = new App();

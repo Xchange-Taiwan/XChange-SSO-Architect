@@ -44,8 +44,8 @@ export class AmplifyStack extends core.Stack {
       basicAuth: accessControl,
     });
 
-    domain.mapSubDomain(main, 'auth');
-    domain.mapSubDomain(staging, 'auth-staging');
-    domain.mapSubDomain(dev, 'auth-dev');
+    domain.mapSubDomain(main, 'sso');
+    domain.mapSubDomain(staging, 'sso-staging');
+    domain.mapSubDomain(dev, 'sso-dev');
   }
 }

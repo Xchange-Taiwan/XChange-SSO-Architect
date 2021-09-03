@@ -8,15 +8,16 @@ import * as lambdaPython from '@aws-cdk/aws-lambda-python';
 import * as ssm from '@aws-cdk/aws-ssm';
 import * as core from '@aws-cdk/core';
 import {
+  BuildConfig,
   SERVICE_PREFIX,
   XChangeLambdaFunctionDefaultProps,
 } from '../../../helper/helper';
 
 interface AuthLambdaStackDependencyProps extends core.StackProps {
+  buildConfig: BuildConfig;
   apiGateway: apigatewayv2.HttpApi;
   userPool: cognito.IUserPool;
   userTable: dynamodb.ITable;
-  generalLayerStringParameter: ssm.IStringParameter;
 }
 
 export class AuthLambdaStack extends core.Stack {
@@ -26,18 +27,21 @@ export class AuthLambdaStack extends core.Stack {
     props: AuthLambdaStackDependencyProps,
   ) {
     super(scope, id, props);
+    const buildConfig: BuildConfig = props.buildConfig;
+
     // dependencies
     const apiGateway: apigatewayv2.HttpApi = props.apiGateway;
     const userPool: cognito.IUserPool = props.userPool;
     const userTable: dynamodb.ITable = props.userTable;
-    const generalLayerStringParameter: ssm.IStringParameter =
-      props.generalLayerStringParameter;
 
-    // generate layer version from arn
+    // Layer
     const authLayer = lambdaPython.PythonLayerVersion.fromLayerVersionArn(
       this,
-      id + 'xchangeSSOLayer',
-      generalLayerStringParameter.stringValue,
+      id + 'authLayer',
+      ssm.StringParameter.valueForStringParameter(
+        this,
+        `/arn/sso/${buildConfig.stage}/authLayer`,
+      ),
     );
 
     //  The code that defines your stack goes here;

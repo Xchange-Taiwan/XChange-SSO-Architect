@@ -1,18 +1,17 @@
 import * as path from 'path';
 import * as cognito from '@aws-cdk/aws-cognito';
 import * as iam from '@aws-cdk/aws-iam';
-import * as lambda from '@aws-cdk/aws-lambda';
 import * as lambdaPython from '@aws-cdk/aws-lambda-python';
 import * as ssm from '@aws-cdk/aws-ssm';
 import * as core from '@aws-cdk/core';
 import {
+  BuildConfig,
   SERVICE_PREFIX,
   XChangeLambdaFunctionDefaultProps,
 } from '../helper/helper';
-import { APP_REMOVALPOLICY } from '../main';
 
 interface CognitoStackDependencyProps extends core.StackProps {
-  generalLayerStringParameter: ssm.IStringParameter;
+  buildConfig: BuildConfig;
 }
 export class CognitoStack extends core.Stack {
   public readonly userPool!: cognito.UserPool;
@@ -24,25 +23,22 @@ export class CognitoStack extends core.Stack {
     props: CognitoStackDependencyProps,
   ) {
     super(scope, id, props);
-    // dependencies
-    const generalLayerStringParameter: ssm.IStringParameter =
-      props.generalLayerStringParameter;
-    // // fetch the Arn from param store
-    // const authLayerArn = ssm.StringParameter.valueForStringParameter(
-    //   this,
-    //   '/layer/xchange_sso/auth',
-    // );
+    const buildConfig: BuildConfig = props.buildConfig;
 
-    // generate layer version from arn
-    const authLayer = lambda.LayerVersion.fromLayerVersionArn(
+    // dependencies
+    // Layer
+    const authLayer = lambdaPython.PythonLayerVersion.fromLayerVersionArn(
       this,
       id + 'authLayer',
-      generalLayerStringParameter.stringValue,
+      ssm.StringParameter.valueForStringParameter(
+        this,
+        `/arn/sso/${buildConfig.stage}/authLayer`,
+      ),
     );
 
     // Authorizer
     this.userPool = new cognito.UserPool(this, id + 'SSOUserPool', {
-      removalPolicy: APP_REMOVALPOLICY,
+      removalPolicy: buildConfig.removalPolicy,
 
       userPoolName: SERVICE_PREFIX + 'UserPool',
       selfSignUpEnabled: true,
@@ -155,7 +151,7 @@ export class CognitoStack extends core.Stack {
     );
 
     defineAuthChallengeLambda.role?.attachInlinePolicy(
-      new iam.Policy(this, id + 'defineAuthChallengeLambda--userpool-policy', {
+      new iam.Policy(this, id + 'defineAuthChallengeLambda-userpool-policy', {
         statements: [
           new iam.PolicyStatement({
             actions: ['cognito-idp:DescribeUserPool'],

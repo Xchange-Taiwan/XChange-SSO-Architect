@@ -1,55 +1,54 @@
 import * as core from '@aws-cdk/core';
+import { BuildConfig } from '../helper/helper';
 import { ApiGatewayStack } from '../stack/api-gateway.stack';
 import { CognitoStack } from '../stack/cognito.stack';
 import { DynamoDBStack } from '../stack/dynamoDB.stack';
 import { AuthLambdaStack } from '../stack/lambda/Auth/auth-lambda.stack';
 import { Oauth2LambdaStack } from '../stack/lambda/OAuth2/oauth2-lambda.stack';
-import { AuthLayerStack } from '../stack/layer/auth-layer.stack';
-
-interface SSOBackendDependencyProps extends core.StackProps {
-  wildcardXchangeDomainCertificateArn: string;
-  linkedInSecretArn: string;
+interface BackendStageDependencyProps extends core.StackProps {
+  buildConfig: BuildConfig;
 }
-export class SSOBackend extends core.Stage {
+export class BackendStage extends core.Stage {
   constructor(
     scope: core.Construct,
     id: string,
-    props: SSOBackendDependencyProps,
+    props: BackendStageDependencyProps,
   ) {
     super(scope, id, props);
-    const wildcardXchangeDomainCertificateArn: string =
-      props.wildcardXchangeDomainCertificateArn;
-    const linkedInSecretArn: string = props.linkedInSecretArn;
-
-    // // deplay first => Layer
-    const authLayerStack = new AuthLayerStack(this, id + 'AuthLayerStack');
+    const buildConfig: BuildConfig = props.buildConfig;
 
     const cognitoStack = new CognitoStack(this, id + 'CognitoStack', {
-      generalLayerStringParameter: authLayerStack.generalLayerStringParameter,
+      env: buildConfig.backendAccount,
+      buildConfig,
     });
 
     const apiGatewayStack = new ApiGatewayStack(this, id + 'ApiGatewayStack', {
+      env: buildConfig.backendAccount,
+      buildConfig,
       userPool: cognitoStack.userPool,
       userPoolClient: cognitoStack.crmClient,
-      wildcardXchangeDomainCertificateArn,
     });
 
-    const dynamoDBStack = new DynamoDBStack(this, id + 'DynamoDBStack');
+    const dynamoDBStack = new DynamoDBStack(this, id + 'DynamoDBStack', {
+      env: buildConfig.backendAccount,
+      buildConfig,
+    });
 
     // Lambda
     new AuthLambdaStack(this, id + 'AuthLambdaStack', {
+      env: buildConfig.backendAccount,
+      buildConfig,
       apiGateway: apiGatewayStack.apiGateway,
       userPool: cognitoStack.userPool,
       userTable: dynamoDBStack.cognitoUserTable,
-      generalLayerStringParameter: authLayerStack.generalLayerStringParameter,
     });
 
     new Oauth2LambdaStack(this, id + 'Oauth2LambdaStack', {
+      env: buildConfig.backendAccount,
+      buildConfig,
       apiGateway: apiGatewayStack.apiGateway,
       userPool: cognitoStack.userPool,
       userTable: dynamoDBStack.cognitoUserTable,
-      generalLayerStringParameter: authLayerStack.generalLayerStringParameter,
-      linkedInSecretArn: linkedInSecretArn,
     });
   }
 }

@@ -3,6 +3,7 @@ import * as core from '@aws-cdk/core';
 import * as aws from 'aws-sdk';
 
 export const SERVICE_PREFIX = 'XChange_SSO_Architect_';
+export const REGION = 'ap-southeast-1';
 
 export const XChangeLambdaFunctionDefaultProps = {
   index: 'app.py',
@@ -11,6 +12,23 @@ export const XChangeLambdaFunctionDefaultProps = {
   memorySize: 512,
   timeout: core.Duration.seconds(6),
 };
+
+export interface XChangeSSOEnvConfigSet {
+  deploymentAccount: core.Environment;
+  // development: BuildConfig;
+  // staging: BuildConfig;
+  production: BuildConfig;
+}
+export interface BuildConfig {
+  stage: string;
+  backendAccount: core.Environment;
+  frontendAccount: core.Environment;
+  removalPolicy: core.RemovalPolicy;
+  externalParameters: {
+    linkedInSecretManagerArn: string;
+    wildcardXchangeDomainCertificateArn: string;
+  };
+}
 
 const getCrossAccountCredentials = async (
   developmentArn: string,
@@ -39,12 +57,12 @@ const getCrossAccountCredentials = async (
   });
 };
 
-export const getBuildConfig = async (): Promise<any> => {
+export const getBuildConfigSet = async (): Promise<any> => {
   let ssm: aws.SSM | undefined = undefined;
 
   /**
    * if in CodeBuild, process.env.CDK_DEVELOPMENT_ARN will undefined
-   * but in local developmen, must set export CDK_DEVELOPMENT_ARN="'arn:aws:iam::XXXXXXXXXXXXX:role/OrganizationAccountAccessRole'"
+   * but in local development, must set export CDK_DEVELOPMENT_ARN="arn:aws:iam::XXXXX:role/OrganizationAccountAccessRole"
    *
    */
   const developmentArn = process.env.CDK_DEVELOPMENT_ARN;
@@ -65,95 +83,57 @@ export const getBuildConfig = async (): Promise<any> => {
     ssm = new aws.SSM();
   }
 
-  // Get ssm value
-  const domainAcmAccountIDRes = await ssm
-    .getParameter({
-      Name: '/account/share/domainAcm',
-    })
-    .promise();
-  const domainAcmAccountID = domainAcmAccountIDRes.Parameter?.Value;
-  if (!domainAcmAccountID) {
-    throw new Error("Parameter: /account/share/domainAcm isn't exist!");
+  const ssmPaths: { [key: string]: string } = {
+    deploymentAccountID: '/account/sso/deployment',
+    productionSsoBackendAccountID: '/account/sso/prod/backend',
+    productionSsoFrontendAccountID: '/account/sso/frontend',
+    productionBackendWildcardXchangeDomainCertificateArn:
+      '/arn/sso/production/backend/wildcardXchangeDomain',
+    productionLinkedInSecretManagerArn:
+      '/arn/sso/production/backend/linkedInSecretManager',
+  };
+
+  const ssmValues: { [key: string]: string } = {};
+
+  for (const key in ssmPaths) {
+    const ssmPath = ssmPaths[key];
+    const ssmGetParameterResponse = await ssm
+      .getParameter({
+        Name: ssmPath,
+      })
+      .promise();
+    const ssmValue = ssmGetParameterResponse.Parameter?.Value;
+    if (!ssmValue) {
+      throw new Error(`Parameter: ${ssmPath} isn't exist!`);
+    }
+    ssmValues[key] = ssmValue;
   }
 
-  const ssoDevelopmentAccountIDRes = await ssm
-    .getParameter({
-      Name: '/account/sso/development',
-    })
-    .promise();
-  const ssoDevelopmentAccountID = ssoDevelopmentAccountIDRes.Parameter?.Value;
-  if (!ssoDevelopmentAccountID) {
-    throw new Error("Parameter: /account/sso/development isn't exist!");
-  }
-
-  const ssoBackendProdAccountIDRes = await ssm
-    .getParameter({
-      Name: '/account/sso/prod/backend',
-    })
-    .promise();
-  const ssoBackendProdAccountID = ssoBackendProdAccountIDRes.Parameter?.Value;
-  if (!ssoBackendProdAccountID) {
-    throw new Error("Parameter: /account/sso/prod/backend isn't exist!");
-  }
-
-  const ssoFrontendAccountIDRes = await ssm
-    .getParameter({
-      Name: '/account/sso/frontend',
-    })
-    .promise();
-  const ssoFrontendAccountID = ssoFrontendAccountIDRes.Parameter?.Value;
-  if (!ssoFrontendAccountID) {
-    throw new Error("Parameter: /account/sso/frontend isn't exist!");
-  }
-
-  const wildcardXchangeDomainCertificateArnRes = await ssm
-    .getParameter({
-      Name: '/arn/share/domainAcm/wildcardXchangeDomain',
-    })
-    .promise();
-  const wildcardXchangeDomainCertificateArn =
-    wildcardXchangeDomainCertificateArnRes.Parameter?.Value;
-  if (!wildcardXchangeDomainCertificateArn) {
-    throw new Error(
-      "Parameter: /arn/share/domainAcm/wildcardXchangeDomain isn't exist!",
-    );
-  }
-
-  const linkedInSecretArnRes = await ssm
-    .getParameter({
-      Name: '/arn/share/secret/linkedIn',
-    })
-    .promise();
-  const linkedInSecretArn = linkedInSecretArnRes.Parameter?.Value;
-  if (!linkedInSecretArn) {
-    throw new Error("Parameter: /arn/share/secret/linkedIn isn't exist!");
-  }
-
-  const organizations = {
-    domainAcm: {
-      account: domainAcmAccountID,
-      region: 'ap-southeast-1',
+  const buildConfigSet: XChangeSSOEnvConfigSet = {
+    deploymentAccount: {
+      account: ssmValues.deploymentAccountID,
+      region: REGION,
     },
-    ssoDevelopment: {
-      account: ssoDevelopmentAccountID,
-      region: 'ap-southeast-1',
-    },
-    ssoBackendProd: {
-      account: ssoBackendProdAccountID,
-      region: 'ap-southeast-1',
-    },
-    ssoFrontend: {
-      account: ssoFrontendAccountID,
-      region: 'ap-southeast-1',
+    production: {
+      stage: 'production',
+      removalPolicy: core.RemovalPolicy.RETAIN,
+      backendAccount: {
+        account: ssmValues.productionSsoBackendAccountID,
+        region: REGION,
+      },
+      frontendAccount: {
+        account: ssmValues.productionSsoFrontendAccountID,
+        region: REGION,
+      },
+      externalParameters: {
+        linkedInSecretManagerArn: ssmValues.productionLinkedInSecretManagerArn,
+        wildcardXchangeDomainCertificateArn:
+          ssmValues.productionBackendWildcardXchangeDomainCertificateArn,
+      },
     },
   };
 
-  const buildConfig = {
-    organizations,
-    wildcardXchangeDomainCertificateArn,
-    linkedInSecretArn,
-  };
   console.log('Set Build Config:');
-  console.log(buildConfig);
-  return buildConfig;
+  console.log(buildConfigSet);
+  return buildConfigSet;
 };

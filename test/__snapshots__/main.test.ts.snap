@@ -481,6 +481,15 @@ Object {
             },
             Object {
               "Action": Array [
+                "ssm:Get*",
+                "ssm:List*",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "SSMReadOnly",
+            },
+            Object {
+              "Action": Array [
                 "s3:GetObject*",
                 "s3:GetBucket*",
                 "s3:List*",
@@ -964,6 +973,15 @@ Object {
               "Action": "sts:AssumeRole",
               "Effect": "Allow",
               "Resource": "arn:aws:iam::*:role/cdk-hnb659fds-lookup-role-*",
+            },
+            Object {
+              "Action": Array [
+                "ssm:Get*",
+                "ssm:List*",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "SSMReadOnly",
             },
             Object {
               "Action": "sts:AssumeRole",
