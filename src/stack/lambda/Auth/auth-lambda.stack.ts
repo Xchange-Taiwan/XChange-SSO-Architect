@@ -76,14 +76,7 @@ export class AuthLambdaStack extends core.Stack {
       {
         ...XChangeLambdaFunctionDefaultProps,
         functionName: SERVICE_PREFIX + 'Register',
-        entry: path.join(
-          './',
-          'code',
-          'lambda',
-          'function',
-          'Auth',
-          'Register',
-        ),
+        entry: path.join('./', 'code', 'lambda', 'function', 'Auth', 'Login'),
         layers: [authLayer],
         environment: {
           USER_POOL_ID: userPool.userPoolId,
