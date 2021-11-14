@@ -1,14 +1,10 @@
 import json
-import requests
 import os
 import logging
 
 from aws import helper
-from aws import dynamodb_utils
+from aws import federate
 from aws.helper import DeveloperMode
-
-import boto3
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -19,101 +15,108 @@ USER_TABLE_NAME = os.environ["USER_TABLE_NAME"]
 
 @DeveloperMode(True)
 def lambda_handler(event, context):
-    # return helper.buildResponse(event)
+    """
+    Lambda function to register a new user.
 
-    inputJson = json.loads(event["body"])
+    description:
+        This function is used to register a new user.
+        The user is registered in the user pool and the user is added to the user table.
+        if platform and platform token are provided, the user is federated to the platform.
+
+    payload:
+        email: email of the user
+        password: password of the user
+        client_id: client id of the client
+        redirect_uri: client id of the redirect_uri
+        optional:
+            platform: platform to federate the user to dynamodb
+            platform_id_token: token to federate the user to dynamodb
+            platform_access_token: access token to federate the user to dynamodb
+        
+    """
+
+    input_json = dict()
+    input_json = json.loads(event["body"])
 
     # Input data validation -----
-    if not "email" in inputJson:
-        return helper.buildResponse({"message": "E-mail address is required."}, 403)
-    if not "password" in inputJson:
-        return helper.buildResponse({"message": "Password is required."}, 403)
-    elif len(inputJson["password"]) < 6:
-        return helper.buildResponse(
-            {"message": "Password must be at least 6 characters long."}, 403
-        )
-    if not "client_id" in inputJson:
-        return helper.buildResponse({"message": "`client_id` is required"}, 403)
+    if not "email" in input_json:
+        return helper.build_response(
+            {"message": "E-mail address is required."}, 403)
+    if not "password" in input_json:
+        return helper.build_response({"message": "Password is required."}, 403)
+    elif len(input_json["password"]) < 6:
+        return helper.build_response(
+            {"message": "Password must be at least 6 characters long."}, 403)
+    if not "client_id" in input_json:
+        return helper.build_response({"message": "`client_id` is required"},
+                                     403)
 
-    # if not "callback_url" in inputJson or len(inputJson["callback_url"]) == 0:
-    #     return helper.buildResponse({"message": "`callback_url` is required."}, 403)
-
-    inputJson = json.loads(event["body"])
     # data validated, assign to variables
-    email = inputJson["email"].lower()  # store all emails as lower case
-    password = inputJson["password"]
+    email = input_json["email"].lower()  # store all emails as lower case
+    password = input_json["password"]
 
-    # check if client ID is valid -----
-    clientID = None
-    if "client_id" in inputJson:
-        clientID = inputJson["client_id"]
+    # verify the client_id and redirect_uri
+    if not "client_id" in input_json or not "redirect_uri" in input_json:
+        return helper.build_response(
+            {"message": "You do not have permission to access this resource."},
+            403)
 
-    # build client metadata for confirmation email -----
-    clientMetadata = dict()
-    if "agent" in inputJson:
-        clientMetadata["agent"] = inputJson["agent"]
-    if "client_id" in inputJson:
-        clientMetadata["client_id"] = inputJson["client_id"]
-    if "callback_url" in inputJson:
-        clientMetadata["callback_url"] = inputJson["callback_url"]
+    client_id = input_json["client_id"]
+    redirect_uri = input_json["redirect_uri"]
 
-    # perform cognito register
-    resp, msg = helper.register(
-        USER_POOL_ID,
-        email,
-        email,
-        password,
-        clientID,
-        clientMetadata=clientMetadata,
-    )
-    logging.info(resp)
-    logging.info(msg)
-    if "platform" in inputJson:
-        platform = inputJson["platform"]
-
-        if platform == "LinkedIn":
-
-            logging.info("platform linkedin")
-
-            if "platform_access_token" in inputJson:
-                logging.info("access token provided")
-                accessToken = inputJson["platform_access_token"]
-                userInfoURL = "https://api.linkedin.com/v2/me"
-                headers = {"Authorization": "Bearer " + accessToken}
-
-                response = requests.get(userInfoURL, headers=headers).json()
-                logging.info(response)
-                platformUserID = response["id"]
-
-                dynamodb_client = boto3.client("dynamodb")
-
-                existingAccounts = dynamodb_client.query(
-                    TableName=USER_TABLE_NAME,
-                    IndexName="linkedin_id-index",
-                    KeyConditionExpression="linkedin_id = :id",
-                    ExpressionAttributeValues={
-                        ":id": {
-                            "S": str(platformUserID),
-                        },
-                    },
-                )
-
-                # only allow linking id to new registered account not previously linked
-                if len(existingAccounts["Items"]) == 0:
-                    user_item = dict()
-                    user_item["cognito_id"] = resp["UserSub"]
-                    user_item["email"] = email
-                    user_item["linkedin_id"] = platformUserID
-
-                    res = dynamodb_client.put_item(
-                        TableName=USER_TABLE_NAME,
-                        Item=dynamodb_utils.dumps(user_item, as_dict=True),
-                        ConditionExpression="attribute_not_exists(cognito_id)",
-                    )
-
-    # error if message exists
+    _, msg = helper.verify_client_id_and_redirect_uri(
+        user_pool_id=USER_POOL_ID,
+        client_id=client_id,
+        redirect_uri=redirect_uri)
     if msg != None:
         logging.info(msg)
-        return helper.buildResponse({"message": msg}, 403)
+        return helper.build_response({"message": msg}, 403)
 
-    return helper.buildResponse({"message": msg}, 200)
+    # build client metadata for confirmation email -----
+    client_metadata = dict()
+    if "agent" in input_json:
+        client_metadata["agent"] = input_json["agent"]
+    if "client_id" in input_json:
+        client_metadata["client_id"] = input_json["client_id"]
+    if "redirect_uri" in input_json:
+        client_metadata["redirect_uri"] = input_json["redirect_uri"]
+
+    # perform cognito register
+    resp, msg = helper.register(user_pool_id=USER_POOL_ID,
+                                username=email,
+                                email=email,
+                                password=password,
+                                client_id=client_id,
+                                client_metadata=client_metadata)
+    if msg != None:
+        logging.info(msg)
+        return helper.build_response({"message": msg}, 403)
+
+    # get user info
+    user_cognito_id = resp["UserSub"]
+
+    # register the federate record in the user table
+    if "platform_id_token" in input_json or "platform_access_token" in input_json:
+
+        platform_login_data = dict()
+        platform_login_data["platform"] = input_json["platform"]
+        if "platform_code" in input_json:
+            platform_login_data["code"] = input_json["platform_code"]
+        if "platform_id_token" in input_json:
+            platform_login_data["id_token"] = input_json["platform_id_token"]
+        if "platform_access_token" in input_json:
+            platform_login_data["access_token"] = input_json[
+                "platform_access_token"]
+
+        feder_resp, msg = federate.verify_federate_and_register_or_get_user(
+            user_table_name=USER_TABLE_NAME,
+            platform_login_data=platform_login_data,
+            user_cognito_id=user_cognito_id,
+            cognito_email=email,
+            mode="register")
+
+        if msg != None:
+            logging.info(msg)
+            return helper.build_response({"message": msg}, 403)
+
+    return helper.build_response({"message": msg}, 200)

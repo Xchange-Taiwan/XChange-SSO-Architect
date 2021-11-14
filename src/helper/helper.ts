@@ -3,7 +3,17 @@ import * as core from '@aws-cdk/core';
 import * as aws from 'aws-sdk';
 
 export const SERVICE_PREFIX = 'XChange_SSO_Architect_';
+export const STACK_PREFIX = 'XChangeSSO';
+export const REMOVAL_POLICY = core.RemovalPolicy.DESTROY;
 export const REGION = 'ap-southeast-1';
+
+export const QOOBITLambdaFunctionDefaultProps = {
+  index: 'app.py',
+  runtime: lambda.Runtime.PYTHON_3_8,
+  handler: 'lambda_handler',
+  memorySize: 512,
+  timeout: core.Duration.seconds(6),
+};
 
 export const XChangeLambdaFunctionDefaultProps = {
   index: 'app.py',

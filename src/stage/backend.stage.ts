@@ -41,6 +41,7 @@ export class BackendStage extends core.Stage {
       apiGateway: apiGatewayStack.apiGateway,
       userPool: cognitoStack.userPool,
       userTable: dynamoDBStack.cognitoUserTable,
+      cognitoAuthCodeTable: dynamoDBStack.cognitoAuthCodeTable,
     });
 
     new Oauth2LambdaStack(this, id + 'Oauth2LambdaStack', {
@@ -49,6 +50,7 @@ export class BackendStage extends core.Stage {
       apiGateway: apiGatewayStack.apiGateway,
       userPool: cognitoStack.userPool,
       userTable: dynamoDBStack.cognitoUserTable,
+      cognitoAuthCodeTable: dynamoDBStack.cognitoAuthCodeTable,
     });
   }
 }

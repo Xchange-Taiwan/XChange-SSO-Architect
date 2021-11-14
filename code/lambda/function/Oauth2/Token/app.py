@@ -1,206 +1,92 @@
+import base64
 import json
 import os
 import logging
-
-import requests
-
-import boto3
-from boto3.dynamodb.conditions import Key
+from urllib.parse import unquote
 
 from aws import helper
-from aws import service
-from aws import dynamodb_utils
 from aws.helper import DeveloperMode
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 USER_POOL_ID = os.environ["USER_POOL_ID"]
 USER_TABLE_NAME = os.environ["USER_TABLE_NAME"]
-LINKEDIN_SECRET_ARN = os.environ["LINKEDIN_SECRET_ARN"]
+
+AUTH_CODE_TABLE_NAME = os.environ["AUTH_CODE_TABLE_NAME"]
 
 
 @DeveloperMode(True)
 def lambda_handler(event, context):
-    # return helper.buildResponse(event)
+    """
+    Token Request Handler
+    """
 
-    inputJson = json.loads(event["body"])
+    if not "body" in event:
+        return helper.build_response({"message": "invalid_request"}, 400)
 
-    password = ""  # Our auth function still requires a password but it's not used in CUSTOM_AUTH
-    platform = inputJson["platform"]
-    code = None
-    accessToken = None
-    accessTokenExpiry = None
-    refreshToken = None
-    refreshTokenExpiry = None
-    clientID = None
+    client_id = None
+    client_secret = None
 
-    if "code" in inputJson:
-        code = inputJson["code"]
-    if "access_token" in inputJson:
-        accessToken = inputJson["access_token"]
-    # refreshToken = inputJson['refresh_token']
-    clientID = inputJson["client_id"]
+    event_body_b64decoded = base64.b64decode(event["body"]).decode("utf-8")
+    body_b64decoded_urldecoded = unquote(event_body_b64decoded)
+    parameters = body_b64decoded_urldecoded.split("&")
 
-    userInfo = None
-    response = None
+    input_json = dict()
+    for parameter in parameters:
+        key, value = parameter.split("=")
+        input_json[key] = value
 
-    platformUserID = None
-    platformUserImage = None
-    platformUserFirstName = None
-    platformUserLastName = None
+    if "grant_type" not in input_json:
+        return helper.build_response({"message": "invalid_request"}, 400)
+    if "code" not in input_json:
+        return helper.build_response({"message": "invalid_request"}, 400)
 
-    account = None
+    if "redirect_uri" not in input_json:
+        return helper.build_response({"message": "invalid_request"}, 400)
 
-    tokenResponse = dict()
+    if "authorization" in event["headers"]:
+        authorization = event["headers"]["authorization"]
+        client_id, client_secret, msg = helper.get_client_id_and_secret(authorization)
+        if msg is not None:
+            return helper.build_response({"message": msg}, 400)
+    else:
+        if "client_id" not in input_json:
+            return helper.build_response({"message": "invalid_request"}, 400)
+        client_id = input_json["client_id"]
 
-    secret = service.getSecret(secretName=LINKEDIN_SECRET_ARN)
+    grant_type = input_json["grant_type"]
+    code = input_json["code"]
+    redirect_uri = input_json["redirect_uri"]
 
-    if platform == "LinkedIn":
-
-        if code is not None:
-            tokenURL = "https://www.linkedin.com/oauth/v2/accessToken"
-            payload = dict()
-            payload["grant_type"] = inputJson["grant_type"]
-            payload["code"] = inputJson["code"]
-            payload["client_id"] = secret["LINKEDIN_CLIENT_ID"]
-            payload["client_secret"] = secret["LINKEDIN_CLIENT_SECRET"]
-            payload["redirect_uri"] = inputJson["redirect_uri"]
-            # payload['redirect_uri'] = 'http://sso.xchange.com.tw/oauth2/callback'
-
-            response = requests.post(tokenURL, data=payload).json()
-
-            logger.info(response)
-
-            if "error" in response:
-                return helper.buildResponse(
-                    {"message": response["error_description"]}, 403
-                )
-            accessToken = response["access_token"]
-            if "expires_in" in response:
-                accessTokenExpiry = response["expires_in"]
-            if "refresh_token" in response:
-                refreshToken = response["refresh_token"]
-            if "refresh_token_expires_in" in response:
-                refreshTokenExpiry = response["refresh_token_expires_in"]
-
-            logger.info(accessToken)
-
-            tokenResponse["platform_access_token"] = response["access_token"]
-            tokenResponse["platform_access_token_expires_in"] = response["expires_in"]
-            # return helper.buildResponse(resp,200)
-
-        if accessToken is not None:
-            userInfoURL = "https://api.linkedin.com/v2/me"
-            headers = {"Authorization": "Bearer " + accessToken}
-            payload = dict()
-
-            response = requests.get(userInfoURL, headers=headers).json()
-            logger.info(response)
-
-            platformUserID = response["id"]
-            if "en_US" in response["firstName"]["localized"]:
-                platformUserFirstName = response["firstName"]["localized"]["en_US"]
-            if "en_US" in response["lastName"]["localized"]:
-                platformUserLastName = response["lastName"]["localized"]["en_US"]
-
-            profileInfoURL = (
-                userInfoURL
-                + "?projection=(id,profilePicture(displayImage~:playableStreams))"
-            )
-
-            response = requests.get(profileInfoURL, headers=headers).json()
-
-            logger.info(response)
-
-            if len(response["profilePicture"]["displayImage~"]["elements"]) > 0:
-                platformUserImage = response["profilePicture"]["displayImage~"][
-                    "elements"
-                ][len(response["profilePicture"]["displayImage~"]["elements"]) - 1][
-                    "identifiers"
-                ][
-                    0
-                ][
-                    "identifier"
-                ]
-
-        tokenResponse["platform_user_id"] = platformUserID
-        tokenResponse["platform_user_first_name"] = platformUserFirstName
-        tokenResponse["platform_user_last_name"] = platformUserLastName
-        tokenResponse["platform_user_image"] = platformUserImage
-
-        if platformUserID is not None:
-            account = None
-            logger.info("LinkedIn ID found: " + platformUserID)
-            dynamodb_client = boto3.client("dynamodb")
-
-            existingAccounts = dynamodb_client.query(
-                TableName=USER_TABLE_NAME,
-                IndexName="linkedin_id-index",
-                KeyConditionExpression="linkedin_id = :id",
-                ExpressionAttributeValues={
-                    ":id": {
-                        "S": str(platformUserID),
-                    },
-                },
-            )
-            # only allow linking id to new registered account not previously linked
-
-            if len(existingAccounts["Items"]):
-                account = dynamodb_utils.loads(existingAccounts["Items"][0])
-
-    elif platform == "Facebook":
-        if code is not None:
-            tokenURL = "https://graph.facebook.com/v11.0/oauth/access_token"
-            # accessToken =
-        if accessToken is not None:
-            userInfoURL = "https://graph.facebook.com/debug_token"
-            # userInfo =
-        pass
-    elif platform == "Google":
-        if code is not None:
-            tokenURL = ""
-            # accessToken =
-        if accessToken is not None:
-            userInfoURL = ""
-            # userInfo =
-        pass
-    elif platform == "LINE":
-        if code is not None:
-            tokenURL = ""
-            # accessToken =
-        if accessToken is not None:
-            userInfoURL = ""
-            # userInfo =
-        pass
-
-    if not account is None:
-        # if 3rd party access_token validated correctly, check we generate our own token using CUSTOM_AUTH challenge
-        password = ""
-        resp, msg = helper.initiateAuth(
-            USER_POOL_ID,
-            account["email"],
-            password,
-            clientID,
-            authFlow="CUSTOM_AUTH",
+    # verify the client_id and redirect_uri
+    if not "client_id" in input_json or not "redirect_uri" in input_json:
+        return helper.build_response(
+            {"message": "You do not have permission to access this resource."}, 403
         )
 
-        # cognito error message check
+    _, msg = helper.verify_client_id_and_redirect_uri(
+        user_pool_id=USER_POOL_ID, client_id=client_id, redirect_uri=redirect_uri
+    )
+    if msg != None:
+        logging.info(msg)
+        return helper.build_response({"message": msg}, 403)
+
+    # verify the client secret
+    if grant_type == "authorization_code":
+        _, msg = helper.verify_client_secret(
+            user_pool_id=USER_POOL_ID, client_id=client_id, client_secret=client_secret
+        )
         if msg != None:
-            logger.info(msg)
-            return helper.buildResponse({"message": msg}, 403)
+            logging.info(msg)
+            return helper.build_response({"message": msg}, 403)
 
-        logger.info("CHALLENGE PASSED")
-        if resp.get("AuthenticationResult"):
-            logger.info("HAS RESULT")
-            res = resp["AuthenticationResult"]
-
-            tokenResponse["id_token"] = res["IdToken"]
-            tokenResponse["refresh_token"] = res["RefreshToken"]
-            tokenResponse["access_token"] = res["AccessToken"]
-            tokenResponse["expires_in"] = res["ExpiresIn"]
-            tokenResponse["token_type"] = res["TokenType"]
-
-    logger.info(tokenResponse)
-    return helper.buildResponse(tokenResponse, 200)
+        # get the code
+        token_set, msg = helper.get_token_from_code(
+            auth_code_table_name=AUTH_CODE_TABLE_NAME, auth_code=code
+        )
+        if msg != None:
+            logging.info(msg)
+            return helper.build_response({"message": msg}, 403)
+        return helper.build_response(token_set, 200)
+    return helper.build_response({"message": "invalid_request"}, 400)

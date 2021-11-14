@@ -3,6 +3,7 @@ import * as apigatewayv2 from '@aws-cdk/aws-apigatewayv2';
 import * as apigatewayv2Integrations from '@aws-cdk/aws-apigatewayv2-integrations';
 import * as cognito from '@aws-cdk/aws-cognito';
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
+import * as iam from '@aws-cdk/aws-iam';
 import * as lambdaPython from '@aws-cdk/aws-lambda-python';
 import * as secretsmanager from '@aws-cdk/aws-secretsmanager';
 import * as ssm from '@aws-cdk/aws-ssm';
@@ -18,6 +19,7 @@ interface Oauth2LambdaStackDependencyProps extends core.StackProps {
   apiGateway: apigatewayv2.HttpApi;
   userPool: cognito.IUserPool;
   userTable: dynamodb.ITable;
+  cognitoAuthCodeTable: dynamodb.ITable;
 }
 
 export class Oauth2LambdaStack extends core.Stack {
@@ -31,6 +33,7 @@ export class Oauth2LambdaStack extends core.Stack {
     const apiGateway: apigatewayv2.HttpApi = props.apiGateway;
     const userPool: cognito.IUserPool = props.userPool;
     const userTable: dynamodb.ITable = props.userTable;
+    const cognitoAuthCodeTable: dynamodb.ITable = props.cognitoAuthCodeTable;
 
     // Secret Manager
     const linkedInSecret = secretsmanager.Secret.fromSecretCompleteArn(
@@ -49,8 +52,45 @@ export class Oauth2LambdaStack extends core.Stack {
       ),
     );
 
+    const federateTokenExchangeLambda = new lambdaPython.PythonFunction(
+      this,
+      id + 'FederateTokenExchangeLambda',
+      {
+        ...XChangeLambdaFunctionDefaultProps,
+        functionName: SERVICE_PREFIX + 'FederateTokenExchange',
+        entry: path.join(
+          './',
+          'code',
+          'lambda',
+          'function',
+          'Oauth2',
+          'FederateTokenExchange',
+        ),
+        layers: [authLayer],
+        environment: {
+          USER_POOL_ID: userPool.userPoolId,
+          USER_TABLE_NAME: userTable.tableName,
+          LINKEDIN_SECRET_ARN: linkedInSecret.secretName,
+          AUTH_CODE_TABLE_NAME: cognitoAuthCodeTable.tableName,
+        },
+        initialPolicy: [
+          new iam.PolicyStatement({
+            actions: ['cognito-idp:DescribeUserPoolClient'],
+            resources: [userPool.userPoolArn],
+          }),
+        ],
+      },
+    );
+    linkedInSecret.grantRead(federateTokenExchangeLambda);
+    userTable.grantReadWriteData(federateTokenExchangeLambda);
+    cognitoAuthCodeTable.grantReadWriteData(federateTokenExchangeLambda);
+    const federateTokenExchangeLambdaIntegration =
+      new apigatewayv2Integrations.LambdaProxyIntegration({
+        handler: federateTokenExchangeLambda,
+      });
+
     //  The code that defines your stack goes here;
-    const oauth2Lambda = new lambdaPython.PythonFunction(
+    const tokenLambda = new lambdaPython.PythonFunction(
       this,
       id + 'TokenLambda',
       {
@@ -61,15 +101,21 @@ export class Oauth2LambdaStack extends core.Stack {
         environment: {
           USER_POOL_ID: userPool.userPoolId,
           USER_TABLE_NAME: userTable.tableName,
-          LINKEDIN_SECRET_ARN: linkedInSecret.secretName,
+          AUTH_CODE_TABLE_NAME: cognitoAuthCodeTable.tableName,
         },
+        initialPolicy: [
+          new iam.PolicyStatement({
+            actions: ['cognito-idp:DescribeUserPoolClient'],
+            resources: [userPool.userPoolArn],
+          }),
+        ],
       },
     );
-    linkedInSecret.grantRead(oauth2Lambda);
-    userTable.grantReadWriteData(oauth2Lambda);
-    const oauth2LambdaIntegration =
+    userTable.grantReadWriteData(tokenLambda);
+    cognitoAuthCodeTable.grantReadWriteData(tokenLambda);
+    const tokenLambdaIntegration =
       new apigatewayv2Integrations.LambdaProxyIntegration({
-        handler: oauth2Lambda,
+        handler: tokenLambda,
       });
 
     const userinfoLambda = new lambdaPython.PythonFunction(
@@ -95,9 +141,17 @@ export class Oauth2LambdaStack extends core.Stack {
       });
 
     apiGateway.addRoutes({
+      path: '/oauth2/federateTokenExchange',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: federateTokenExchangeLambdaIntegration,
+      authorizer: new apigatewayv2.HttpNoneAuthorizer(),
+      authorizationScopes: [],
+    });
+
+    apiGateway.addRoutes({
       path: '/oauth2/token',
       methods: [apigatewayv2.HttpMethod.POST],
-      integration: oauth2LambdaIntegration,
+      integration: tokenLambdaIntegration,
       authorizer: new apigatewayv2.HttpNoneAuthorizer(),
       authorizationScopes: [],
     });

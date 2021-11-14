@@ -6,4 +6,4 @@ from aws.helper import DeveloperMode
 def lambda_handler(event, context):
     # return helper.buildResponse(event)
     # account = Account.getWithJWTToken(event['headers']['authorization'])
-    return helper.buildResponse(event)
+    return helper.build_response(event)

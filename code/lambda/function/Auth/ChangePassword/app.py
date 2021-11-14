@@ -9,29 +9,28 @@ from aws.helper import DeveloperMode
 def lambda_handler(event, context):
 
     if not "authorization" in event["headers"]:
-        return helper.buildResponse({"message": "Not authorized."}, 403)
+        return helper.build_response({"message": "Not authorized."}, 403)
 
     # check input
-    inputJson = json.loads(event["body"])
+    input_json = json.loads(event["body"])
 
-    if not "old_password" in inputJson:
-        return helper.buildResponse({"message": "Old Password is required."}, 403)
+    if not "old_password" in input_json:
+        return helper.build_response({"message": "Old Password is required."}, 403)
 
-    if not "password" in inputJson:
-        return helper.buildResponse({"message": "New Password is required."}, 403)
+    if not "password" in input_json:
+        return helper.build_response({"message": "New Password is required."}, 403)
 
-    if not "password" in inputJson:
-        return helper.buildResponse({"message": "New Password is required."}, 403)
+    if not "password" in input_json:
+        return helper.build_response({"message": "New Password is required."}, 403)
 
-    previous_password = inputJson["old_password"]
-    proposed_password = inputJson["password"]
+    previous_password = input_json["old_password"]
+    proposed_password = input_json["password"]
     access_token: str = event["headers"]["authorization"]
     access_token = access_token.replace("Bearer ", "")
 
     if len(proposed_password) < 6:
-        return helper.buildResponse(
-            {"message":
-                "Password must be at least 6 characters in length."}, 403
+        return helper.build_response(
+            {"message": "Password must be at least 6 characters in length."}, 403
         )
 
     client = boto3.client("cognito-idp")
@@ -44,6 +43,6 @@ def lambda_handler(event, context):
 
     if msg != None:
         print(msg)
-        return helper.buildResponse({"message": "Error setting password."}, 403)
+        return helper.build_response({"message": "Error setting password."}, 403)
 
-    return helper.buildResponse({"message": "Password has been updated."}, 200)
+    return helper.build_response({"message": "Password has been updated."}, 200)

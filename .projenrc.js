@@ -1,6 +1,6 @@
 const { AwsCdkTypeScriptApp } = require('projen');
 const project = new AwsCdkTypeScriptApp({
-  cdkVersion: '1.120.0',
+  cdkVersion: '1.132.0',
   defaultReleaseBranch: 'main',
   name: 'XChange-SSO-Architect',
   cdkDependencies: [

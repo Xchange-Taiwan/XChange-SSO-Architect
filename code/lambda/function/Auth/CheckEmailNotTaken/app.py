@@ -6,7 +6,6 @@ from aws.helper import DeveloperMode
 
 import boto3
 
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -20,13 +19,13 @@ def lambda_handler(event, context):
         if "email" in event["queryStringParameters"]:
             email = event["queryStringParameters"]["email"]
     if email is None:
-        return helper.buildResponse(False)
+        return helper.build_response(False)
 
     client = boto3.client("cognito-idp")
     try:
         resp = client.admin_get_user(UserPoolId=USER_POOL_ID, Username=email)
     except client.exceptions.UserNotFoundException as e:
-        return helper.buildResponse(True)
+        return helper.build_response(True)
     except Exception as e:
-        return helper.buildResponse(False)
-    return helper.buildResponse(False)
+        return helper.build_response(False)
+    return helper.build_response(False)

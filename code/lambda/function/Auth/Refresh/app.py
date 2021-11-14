@@ -4,7 +4,6 @@ import logging
 from aws import helper
 from aws.helper import DeveloperMode
 
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -12,32 +11,32 @@ logger.setLevel(logging.INFO)
 @DeveloperMode(True)
 def lambda_handler(event, context):
 
-    inputJson = json.loads(event["body"])
+    input_json = json.loads(event["body"])
 
-    if not "refresh_token" in inputJson:
-        return helper.buildResponse({"message": "Refesh token is required."}, 403)
+    if not "refresh_token" in input_json:
+        return helper.build_response({"message": "Refesh token is required."}, 403)
 
-    if not "client_id" in inputJson:
-        return helper.buildResponse({"message": "Client ID is required."}, 403)
+    if not "client_id" in input_json:
+        return helper.build_response({"message": "Client ID is required."}, 403)
 
-    refreshToken = inputJson["refresh_token"]
-    clientID = inputJson["client_id"]
+    refreshToken = input_json["refresh_token"]
+    client_id = input_json["client_id"]
     username = None
-    if "username" in inputJson:
-        username = inputJson["username"]
+    if "username" in input_json:
+        username = input_json["username"]
 
-    resp, msg = helper.refreshAuth(
-        username=username, refreshToken=refreshToken, clientID=clientID
+    resp, msg = helper.refresh_auth(
+        username=username, refreshToken=refreshToken, client_id=client_id
     )
 
     # error with cognito if msg is not None
     if msg != None:
         logging.info(msg)
-        return helper.buildResponse({"message": msg}, 403)
+        return helper.build_response({"message": msg}, 403)
 
     if resp.get("AuthenticationResult"):
         res = resp["AuthenticationResult"]
-        return helper.buildResponse(
+        return helper.build_response(
             {
                 "id_token": res["IdToken"],
                 "access_token": res["AccessToken"],
@@ -47,6 +46,6 @@ def lambda_handler(event, context):
             200,
         )
     else:  # this code block is relevant only when MFA is enabled
-        return helper.buildResponse(
+        return helper.build_response(
             {"error": True, "success": False, "data": None, "message": None}, 200
         )

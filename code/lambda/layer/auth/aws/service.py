@@ -26,16 +26,14 @@ def sendSQSMessage(sqsQueueURL, body):
 def getSecret(secretName, regionName="ap-southeast-1"):
     # Create a Secrets Manager client
     session = boto3.session.Session()
-    client = session.client(
-        service_name="secretsmanager", region_name=regionName)
+    client = session.client(service_name="secretsmanager", region_name=regionName)
 
     # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
     # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
     # We rethrow the exception by default.
 
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secretName)
+        get_secret_value_response = client.get_secret_value(SecretId=secretName)
         print(get_secret_value_response)
     except ClientError as e:
         if e.response["Error"]["Code"] == "DecryptionFailureException":

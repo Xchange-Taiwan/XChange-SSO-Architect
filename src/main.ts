@@ -1,12 +1,14 @@
 import * as core from '@aws-cdk/core';
 import * as pipelines from '@aws-cdk/pipelines';
-import { getBuildConfigSet, XChangeSSOEnvConfigSet } from './helper/helper';
+import {
+  getBuildConfigSet,
+  STACK_PREFIX,
+  XChangeSSOEnvConfigSet,
+} from './helper/helper';
 import { PipelineStack } from './stack/pipeline.stack.ts';
 import { BackendStage } from './stage/backend.stage';
 import { FrontendStage } from './stage/frontend.stage';
 import { BackendLayerStage } from './stage/layer.stage';
-
-const STACK_PREFIX = 'XChangeSSO';
 
 const app = new core.App();
 

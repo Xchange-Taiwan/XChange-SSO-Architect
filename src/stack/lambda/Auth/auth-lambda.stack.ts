@@ -18,6 +18,7 @@ interface AuthLambdaStackDependencyProps extends core.StackProps {
   apiGateway: apigatewayv2.HttpApi;
   userPool: cognito.IUserPool;
   userTable: dynamodb.ITable;
+  cognitoAuthCodeTable: dynamodb.ITable;
 }
 
 export class AuthLambdaStack extends core.Stack {
@@ -33,6 +34,7 @@ export class AuthLambdaStack extends core.Stack {
     const apiGateway: apigatewayv2.HttpApi = props.apiGateway;
     const userPool: cognito.IUserPool = props.userPool;
     const userTable: dynamodb.ITable = props.userTable;
+    const cognitoAuthCodeTable: dynamodb.ITable = props.cognitoAuthCodeTable;
 
     // Layer
     const authLayer = lambdaPython.PythonLayerVersion.fromLayerVersionArn(
@@ -55,9 +57,19 @@ export class AuthLambdaStack extends core.Stack {
         layers: [authLayer],
         environment: {
           USER_POOL_ID: userPool.userPoolId,
+          USER_TABLE_NAME: userTable.tableName,
+          AUTH_CODE_TABLE_NAME: cognitoAuthCodeTable.tableName,
         },
+        initialPolicy: [
+          new iam.PolicyStatement({
+            actions: ['cognito-idp:DescribeUserPoolClient'],
+            resources: [userPool.userPoolArn],
+          }),
+        ],
       },
     );
+    userTable.grantReadWriteData(loginLambda);
+    cognitoAuthCodeTable.grantReadWriteData(loginLambda);
     const loginLambdaIntegration =
       new apigatewayv2Integrations.LambdaProxyIntegration({
         handler: loginLambda,
@@ -82,6 +94,12 @@ export class AuthLambdaStack extends core.Stack {
           USER_POOL_ID: userPool.userPoolId,
           USER_TABLE_NAME: userTable.tableName,
         },
+        initialPolicy: [
+          new iam.PolicyStatement({
+            actions: ['cognito-idp:DescribeUserPoolClient'],
+            resources: [userPool.userPoolArn],
+          }),
+        ],
       },
     );
     userTable.grantReadWriteData(registerLambda);
@@ -226,6 +244,12 @@ export class AuthLambdaStack extends core.Stack {
         environment: {
           USER_POOL_ID: userPool.userPoolId,
         },
+        initialPolicy: [
+          new iam.PolicyStatement({
+            actions: ['cognito-idp:DescribeUserPoolClient'],
+            resources: [userPool.userPoolArn],
+          }),
+        ],
       },
     );
     const logoutLambdaIntegration =
@@ -251,6 +275,12 @@ export class AuthLambdaStack extends core.Stack {
         environment: {
           USER_POOL_ID: userPool.userPoolId,
         },
+        initialPolicy: [
+          new iam.PolicyStatement({
+            actions: ['cognito-idp:DescribeUserPoolClient'],
+            resources: [userPool.userPoolArn],
+          }),
+        ],
       },
     );
     const logoutAllLambdaIntegration =
@@ -279,7 +309,10 @@ export class AuthLambdaStack extends core.Stack {
         initialPolicy: [
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
-            actions: ['cognito-idp:AdminGetUser'],
+            actions: [
+              'cognito-idp:AdminGetUser',
+              'cognito-idp:DescribeUserPoolClient',
+            ],
             resources: [userPool.userPoolArn],
           }),
         ],

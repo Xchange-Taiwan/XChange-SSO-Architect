@@ -26,7 +26,7 @@ export class ApiGatewayStack extends core.Stack {
 
     const authorizer = new apigatewayv2Authorizers.HttpUserPoolAuthorizer({
       userPool,
-      userPoolClient,
+      userPoolClients: [userPoolClient],
     });
 
     // Domain

@@ -1,35 +1,48 @@
 import * as dynamodb from '@aws-cdk/aws-dynamodb';
 import * as core from '@aws-cdk/core';
-import { BuildConfig, SERVICE_PREFIX } from '../helper/helper';
+import { BuildConfig, REMOVAL_POLICY, SERVICE_PREFIX } from '../helper/helper';
 
 interface DynamoDBStackDependencyProps extends core.StackProps {
   buildConfig: BuildConfig;
 }
 export class DynamoDBStack extends core.Stack {
   public readonly cognitoUserTable!: dynamodb.Table;
+  public readonly cognitoAuthCodeTable!: dynamodb.Table;
   constructor(
     scope: core.Construct,
     id: string,
     props: DynamoDBStackDependencyProps,
   ) {
     super(scope, id, props);
-    const buildConfig: BuildConfig = props.buildConfig;
 
-    // 定義資料庫
+    // Define the table
     this.cognitoUserTable = new dynamodb.Table(this, id + 'User', {
       partitionKey: {
         name: 'cognito_id',
         type: dynamodb.AttributeType.STRING,
       },
+      sortKey: {
+        name: 'federated_id',
+        type: dynamodb.AttributeType.STRING,
+      },
       tableName: SERVICE_PREFIX + 'Cognito_User',
-      removalPolicy: buildConfig.removalPolicy,
+      removalPolicy: REMOVAL_POLICY,
     });
     this.cognitoUserTable.addGlobalSecondaryIndex({
       partitionKey: {
-        name: 'linkedin_id',
+        name: 'federated_id',
         type: dynamodb.AttributeType.STRING,
       },
-      indexName: 'linkedin_id-index',
+      indexName: 'federated_id-index',
+    });
+    this.cognitoAuthCodeTable = new dynamodb.Table(this, id + 'AuthCode', {
+      partitionKey: {
+        name: 'auth_code',
+        type: dynamodb.AttributeType.STRING,
+      },
+      tableName: SERVICE_PREFIX + 'Auth_Code',
+      timeToLiveAttribute: 'ttl',
+      removalPolicy: REMOVAL_POLICY,
     });
   }
 }
