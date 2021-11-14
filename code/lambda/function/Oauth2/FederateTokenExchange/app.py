@@ -70,11 +70,15 @@ def lambda_handler(event, context):
     federate_account = None
     platform = input_json["platform"].lower()
 
-    # register the federate record in the user table
-    if "id_token" in input_json or "access_token" in input_json or "code" in input_json:
+    platform_login_data = dict()
+    platform_login_data["platform"] = platform
 
-        platform_login_data = dict()
-        platform_login_data["platform"] = platform
+    # register the federate record in the user table
+    if (
+        "id_token" in input_json
+        or "access_token" in input_json
+        or "platform_code" in input_json
+    ):
 
         if "code" in input_json:
             platform_code = input_json["platform_code"]

@@ -186,6 +186,9 @@ def verify_federate_and_register_or_get_user(
     user_cognito_id=None,
     cognito_email=None,
 ):
+    platform = None
+    platform_id_token = None
+    platform_access_token = None
 
     if "id_token" in platform_login_data:
         platform_id_token = platform_login_data["id_token"]
