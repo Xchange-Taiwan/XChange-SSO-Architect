@@ -77,20 +77,29 @@ def lambda_handler(event, context):
         platform_login_data["platform"] = platform
 
         if "code" in input_json:
-            code = input_json["code"]
+            platform_code = input_json["platform_code"]
 
             secret_client = boto3.client("secretsmanager", region_name="ap-southeast-1")
 
-            token_response = dict()
             if platform == "linkedin":
                 secret = secret_client.get_secret_value(SecretId=LINKEDIN_SECRET_ARN)
                 secret_dict = json.loads(secret["SecretString"])
                 platform_client_id = secret_dict["client_id"]
                 platform_client_secret = secret_dict["client_secret"]
+                if "platform_redirect_uri" not in input_json:
+                    return helper.build_response(
+                        {
+                            "message": "You do not have permission to access this resource."
+                        },
+                        403,
+                    )
+                platform_redirect_uri = input_json["platform_redirect_uri"]
+
                 resp, msg = federate.linkedin_code_to_access_token(
-                    client_id=platform_client_id,
-                    client_secret=platform_client_secret,
-                    code=code,
+                    linkedin_client_id=platform_client_id,
+                    linkedin_client_secret=platform_client_secret,
+                    linkedin_redirect_uri=platform_redirect_uri,
+                    code=platform_code,
                 )
                 if msg != None:
                     logging.info(msg)
@@ -103,9 +112,9 @@ def lambda_handler(event, context):
                 platform_client_id = secret_dict["client_id"]
                 platform_client_secret = secret_dict["client_secret"]
                 resp, msg = federate.facebook_code_to_access_token(
-                    client_id=platform_client_id,
-                    client_secret=platform_client_secret,
-                    code=code,
+                    facebook_client_id=platform_client_id,
+                    facebook_client_secret=platform_client_secret,
+                    code=platform_code,
                 )
                 if msg != None:
                     logging.info(msg)
@@ -118,9 +127,9 @@ def lambda_handler(event, context):
                 platform_client_id = secret_dict["client_id"]
                 platform_client_secret = secret_dict["client_secret"]
                 resp, msg = federate.google_code_to_access_token(
-                    client_id=platform_client_id,
-                    client_secret=platform_client_secret,
-                    code=code,
+                    google_client_id=platform_client_id,
+                    google_client_secret=platform_client_secret,
+                    code=platform_code,
                 )
                 if msg != None:
                     logging.info(msg)
@@ -142,12 +151,12 @@ def lambda_handler(event, context):
             logging.info(msg)
             return helper.build_response({"message": msg}, 403)
 
-    tokenResponse = dict()
-    tokenResponse["platform"] = platform
+    token_response = dict()
+    token_response["platform"] = platform
     if "id_token" in platform_login_data:
-        tokenResponse["platform_id_token"] = platform_login_data["id_token"]
+        token_response["platform_id_token"] = platform_login_data["id_token"]
     if "access_token" in platform_login_data:
-        tokenResponse["platform_access_token"] = platform_login_data["access_token"]
+        token_response["platform_access_token"] = platform_login_data["access_token"]
 
     if not federate_account is None:
         # if 3rd party access_token validated correctly, check we generate our own token using CUSTOM_AUTH challenge
@@ -184,17 +193,17 @@ def lambda_handler(event, context):
                 return helper.build_response({"code": auth_code}, 200)
 
             elif response_type == "token":
-                tokenResponse["access_token"] = formatted_authentication_result[
+                token_response["access_token"] = formatted_authentication_result[
                     "access_token"
                 ]
-                tokenResponse["id_token"] = formatted_authentication_result["id_token"]
-                tokenResponse["refresh_token"] = formatted_authentication_result[
+                token_response["id_token"] = formatted_authentication_result["id_token"]
+                token_response["refresh_token"] = formatted_authentication_result[
                     "refresh_token"
                 ]
-                tokenResponse["expires_in"] = formatted_authentication_result[
+                token_response["expires_in"] = formatted_authentication_result[
                     "expires_in"
                 ]
-                tokenResponse["token_type"] = formatted_authentication_result[
+                token_response["token_type"] = formatted_authentication_result[
                     "token_type"
                 ]
 
@@ -203,5 +212,5 @@ def lambda_handler(event, context):
                     {"message": "Unsupported response type."}, 403
                 )
 
-    logger.info(tokenResponse)
-    return helper.build_response(tokenResponse, 200)
+    logger.info(token_response)
+    return helper.build_response(token_response, 200)

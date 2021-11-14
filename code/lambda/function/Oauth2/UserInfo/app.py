@@ -21,8 +21,8 @@ def lambda_handler(event, context):
             {"message": "Authorization header is missing"}, 401
         )
 
-    authorization: str = event["headers"]["authorization"]
-    access_token: str = authorization.split(" ")[1]
+    authorization = event["headers"]["authorization"]
+    access_token = authorization.replace("Bearer ", "")
 
     cognito_client = boto3.client("cognito-idp")
     try:
@@ -42,7 +42,8 @@ def lambda_handler(event, context):
 
     user_info = resp["UserAttributes"]
     user_info_dict = dict()
+
     for attribute in user_info:
         user_info_dict[attribute["Name"]] = attribute["Value"]
-
+    user_info_dict["ssoUserId"] = user_info_dict["sub"]
     return helper.build_response(user_info_dict, 200)

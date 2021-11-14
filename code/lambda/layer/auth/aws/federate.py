@@ -13,7 +13,7 @@ from google.auth.transport import requests as grequests
 
 
 def google_code_to_access_token(
-    google_client_id, google_client_secret, code, redirect_uri
+    google_client_id, google_client_secret, google_redirect_uri, code
 ):
     try:
         resp = requests.post(
@@ -22,7 +22,7 @@ def google_code_to_access_token(
                 "code": code,
                 "client_id": google_client_id,
                 "client_secret": google_client_secret,
-                "redirect_uri": redirect_uri,
+                "redirect_uri": google_redirect_uri,
                 "grant_type": "authorization_code",
             },
         )
@@ -67,14 +67,16 @@ def mapping_google_id_info_to_sso_user_info(cognito_id, cognito_email, google_id
     return sso_user_info
 
 
-def facebook_code_to_access_token(facebook_client_id, facebook_client_secret, code):
+def facebook_code_to_access_token(
+    facebook_client_id, facebook_client_secret, facebook_redirect_uri, code
+):
     try:
         resp = requests.post(
-            "https://graph.facebook.com/v2.10/oauth/access_token",
+            "https://graph.facebook.com/v3.3/oauth/access_token",
             data={
                 "client_id": facebook_client_id,
+                "redirect_uri": facebook_redirect_uri,
                 "client_secret": facebook_client_secret,
-                "redirect_uri": "https://www.facebook.com/connect/login_success.html",
                 "code": code,
             },
         )
@@ -120,14 +122,16 @@ def mapping_facebook_user_info_to_sso_user_info(
     return sso_user_info
 
 
-def linkedin_code_to_access_token(linkedin_client_id, linkedin_client_secret, code):
+def linkedin_code_to_access_token(
+    linkedin_client_id, linkedin_client_secret, linkedin_redirect_uri, code
+):
     try:
         resp = requests.post(
             "https://www.linkedin.com/oauth/v2/accessToken",
             data={
                 "grant_type": "authorization_code",
                 "code": code,
-                "redirect_uri": "https://www.linkedin.com/oauth/v2/authorization",
+                "redirect_uri": linkedin_redirect_uri,
                 "client_id": linkedin_client_id,
                 "client_secret": linkedin_client_secret,
             },
@@ -135,8 +139,10 @@ def linkedin_code_to_access_token(linkedin_client_id, linkedin_client_secret, co
         if resp.status_code == 200:
             return resp.json(), None
         else:
+            print(resp.json())
             return None, "Invalid code."
     except Exception as e:
+        print(e)
         return None, "Invalid code."
 
 
