@@ -80,7 +80,7 @@ def lambda_handler(event, context):
         or "platform_code" in input_json
     ):
 
-        if "code" in input_json:
+        if "platform_code" in input_json:
             platform_code = input_json["platform_code"]
 
             secret_client = boto3.client("secretsmanager", region_name="ap-southeast-1")
@@ -108,6 +108,7 @@ def lambda_handler(event, context):
                 if msg != None:
                     logging.info(msg)
                     return helper.build_response({"message": msg}, 403)
+
                 platform_login_data["access_token"] = resp["access_token"]
 
             elif platform == "facebook":

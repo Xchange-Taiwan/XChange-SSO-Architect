@@ -153,7 +153,10 @@ def verify_linkedin_access_token(access_token):
     try:
 
         headers = {"Authorization": "Bearer " + access_token}
-        resp = requests.get("https://api.linkedin.com/v2/me", headers=headers)
+        resp = requests.get(
+            "https://api.linkedin.com/v2/me?projection=(id,localizedFirstName,localizedLastName,vanityName,firstName,lastName,emailAddress,headline,profilePicture(displayImage~:playableStreams))",
+            headers=headers,
+        )
         if resp.status_code == 200:
             return resp.json(), None
         else:
@@ -168,14 +171,185 @@ def mapping_linkedin_user_info_to_sso_user_info(
     """
     Map the LinkedIn ID token info to the user info.
     """
+    linkedin_user_info = json.loads(
+        {
+            "localizedLastName": "Sun",
+            "firstName": {
+                "localized": {"zh_TW": "ChenKuan"},
+                "preferredLocale": {"country": "TW", "language": "zh"},
+            },
+            "lastName": {
+                "localized": {"zh_TW": "Sun"},
+                "preferredLocale": {"country": "TW", "language": "zh"},
+            },
+            "profilePicture": {
+                "displayImage": "urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg",
+                "displayImage~": {
+                    "paging": {"count": 10, "start": 0, "links": []},
+                    "elements": [
+                        {
+                            "artifact": "urn:li:digitalmediaMediaArtifact:(urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg,urn:li:digitalmediaMediaArtifactClass:profile-displayphoto-shrink_100_100)",
+                            "authorizationMethod": "PUBLIC",
+                            "data": {
+                                "com.linkedin.digitalmedia.mediaartifact.StillImage": {
+                                    "mediaType": "image/jpeg",
+                                    "rawCodecSpec": {"name": "jpeg", "type": "image"},
+                                    "displaySize": {
+                                        "width": 100.0,
+                                        "uom": "PX",
+                                        "height": 100.0,
+                                    },
+                                    "storageSize": {"width": 100, "height": 100},
+                                    "storageAspectRatio": {
+                                        "widthAspect": 1.0,
+                                        "heightAspect": 1.0,
+                                        "formatted": "1.00:1.00",
+                                    },
+                                    "displayAspectRatio": {
+                                        "widthAspect": 1.0,
+                                        "heightAspect": 1.0,
+                                        "formatted": "1.00:1.00",
+                                    },
+                                }
+                            },
+                            "identifiers": [
+                                {
+                                    "identifier": "https://media-exp1.licdn.com/dms/image/C5603AQFAqHklbrb_zg/profile-displayphoto-shrink_100_100/0/1621187403599?e=1642636800&v=beta&t=MZ6_ftlqnLDjOzFLk4Cj_qsGqht0jkK_kVbBOn0H1Uw",
+                                    "index": 0,
+                                    "mediaType": "image/jpeg",
+                                    "file": "urn:li:digitalmediaFile:(urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg,urn:li:digitalmediaArtifactClass:profile-displayphoto-shrink_100_100,0)",
+                                    "identifierType": "EXTERNAL_URL",
+                                    "identifierExpiresInSeconds": 1642636800,
+                                }
+                            ],
+                        },
+                        {
+                            "artifact": "urn:li:digitalmediaMediaArtifact:(urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg,urn:li:digitalmediaMediaArtifactClass:profile-displayphoto-shrink_200_200)",
+                            "authorizationMethod": "PUBLIC",
+                            "data": {
+                                "com.linkedin.digitalmedia.mediaartifact.StillImage": {
+                                    "mediaType": "image/jpeg",
+                                    "rawCodecSpec": {"name": "jpeg", "type": "image"},
+                                    "displaySize": {
+                                        "width": 200.0,
+                                        "uom": "PX",
+                                        "height": 200.0,
+                                    },
+                                    "storageSize": {"width": 200, "height": 200},
+                                    "storageAspectRatio": {
+                                        "widthAspect": 1.0,
+                                        "heightAspect": 1.0,
+                                        "formatted": "1.00:1.00",
+                                    },
+                                    "displayAspectRatio": {
+                                        "widthAspect": 1.0,
+                                        "heightAspect": 1.0,
+                                        "formatted": "1.00:1.00",
+                                    },
+                                }
+                            },
+                            "identifiers": [
+                                {
+                                    "identifier": "https://media-exp1.licdn.com/dms/image/C5603AQFAqHklbrb_zg/profile-displayphoto-shrink_200_200/0/1621187403599?e=1642636800&v=beta&t=oV6xwDRODiq34e2nHghEQaNcS_w5sMMKT4sCvO8Ruko",
+                                    "index": 0,
+                                    "mediaType": "image/jpeg",
+                                    "file": "urn:li:digitalmediaFile:(urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg,urn:li:digitalmediaArtifactClass:profile-displayphoto-shrink_200_200,0)",
+                                    "identifierType": "EXTERNAL_URL",
+                                    "identifierExpiresInSeconds": 1642636800,
+                                }
+                            ],
+                        },
+                        {
+                            "artifact": "urn:li:digitalmediaMediaArtifact:(urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg,urn:li:digitalmediaMediaArtifactClass:profile-displayphoto-shrink_400_400)",
+                            "authorizationMethod": "PUBLIC",
+                            "data": {
+                                "com.linkedin.digitalmedia.mediaartifact.StillImage": {
+                                    "mediaType": "image/jpeg",
+                                    "rawCodecSpec": {"name": "jpeg", "type": "image"},
+                                    "displaySize": {
+                                        "width": 400.0,
+                                        "uom": "PX",
+                                        "height": 400.0,
+                                    },
+                                    "storageSize": {"width": 400, "height": 400},
+                                    "storageAspectRatio": {
+                                        "widthAspect": 1.0,
+                                        "heightAspect": 1.0,
+                                        "formatted": "1.00:1.00",
+                                    },
+                                    "displayAspectRatio": {
+                                        "widthAspect": 1.0,
+                                        "heightAspect": 1.0,
+                                        "formatted": "1.00:1.00",
+                                    },
+                                }
+                            },
+                            "identifiers": [
+                                {
+                                    "identifier": "https://media-exp1.licdn.com/dms/image/C5603AQFAqHklbrb_zg/profile-displayphoto-shrink_400_400/0/1621187403599?e=1642636800&v=beta&t=KhewUNCAwtcgEeWs3INH5lqMBKpRKv2gOj032BV327c",
+                                    "index": 0,
+                                    "mediaType": "image/jpeg",
+                                    "file": "urn:li:digitalmediaFile:(urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg,urn:li:digitalmediaArtifactClass:profile-displayphoto-shrink_400_400,0)",
+                                    "identifierType": "EXTERNAL_URL",
+                                    "identifierExpiresInSeconds": 1642636800,
+                                }
+                            ],
+                        },
+                        {
+                            "artifact": "urn:li:digitalmediaMediaArtifact:(urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg,urn:li:digitalmediaMediaArtifactClass:profile-displayphoto-shrink_800_800)",
+                            "authorizationMethod": "PUBLIC",
+                            "data": {
+                                "com.linkedin.digitalmedia.mediaartifact.StillImage": {
+                                    "mediaType": "image/jpeg",
+                                    "rawCodecSpec": {"name": "jpeg", "type": "image"},
+                                    "displaySize": {
+                                        "width": 800.0,
+                                        "uom": "PX",
+                                        "height": 800.0,
+                                    },
+                                    "storageSize": {"width": 800, "height": 800},
+                                    "storageAspectRatio": {
+                                        "widthAspect": 1.0,
+                                        "heightAspect": 1.0,
+                                        "formatted": "1.00:1.00",
+                                    },
+                                    "displayAspectRatio": {
+                                        "widthAspect": 1.0,
+                                        "heightAspect": 1.0,
+                                        "formatted": "1.00:1.00",
+                                    },
+                                }
+                            },
+                            "identifiers": [
+                                {
+                                    "identifier": "https://media-exp1.licdn.com/dms/image/C5603AQFAqHklbrb_zg/profile-displayphoto-shrink_800_800/0/1621187403599?e=1642636800&v=beta&t=oENeAm0x0R--Er0MwyK_PgQgBcShpb9NB4M8v9SBIX8",
+                                    "index": 0,
+                                    "mediaType": "image/jpeg",
+                                    "file": "urn:li:digitalmediaFile:(urn:li:digitalmediaAsset:C5603AQFAqHklbrb_zg,urn:li:digitalmediaArtifactClass:profile-displayphoto-shrink_800_800,0)",
+                                    "identifierType": "EXTERNAL_URL",
+                                    "identifierExpiresInSeconds": 1642636800,
+                                }
+                            ],
+                        },
+                    ],
+                },
+            },
+            "id": "3vCQtnHZsq",
+            "localizedFirstName": "ChenKuan",
+        }
+    )
     sso_user_info = dict()
     sso_user_info["cognito_id"] = cognito_id
     sso_user_info["cognito_email"] = cognito_email
     sso_user_info["federated_id"] = "linkedin" + "_" + linkedin_user_info["id"]
-    sso_user_info["first_name"] = linkedin_user_info["firstName"]
-    sso_user_info["last_name"] = linkedin_user_info["lastName"]
-    sso_user_info["email"] = linkedin_user_info["emailAddress"]
-    sso_user_info["picture"] = linkedin_user_info["profilePicture"]
+    sso_user_info["first_name"] = linkedin_user_info["localizedFirstName"]
+    sso_user_info["last_name"] = linkedin_user_info["localizedLastName"]
+    try:
+        sso_user_info["picture"] = linkedin_user_info["profilePicture"][
+            "displayImage~"
+        ]["elements"][0]["identifiers"][0]["identifier"]
+    except Exception as e:
+        sso_user_info["picture"] = ""
     return sso_user_info
 
 
